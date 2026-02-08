@@ -28,7 +28,13 @@ RUN apk add linux-headers build-base go git && \
 FROM docker.io/library/node:jod-alpine
 WORKDIR /app
 
-HEALTHCHECK --interval=1m --timeout=5s --retries=3 CMD /usr/bin/timeout 5s /bin/sh -c "/usr/bin/wg show | /bin/grep -q interface || exit 1"
+# Явно указываем порт, на котором приложение слушает
+EXPOSE 51821
+EXPOSE 80
+
+# Исправляем healthcheck - проверяем доступность веб-сервера
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:51821/ || exit 1
 
 # Copy build
 COPY --from=build /app/.output /app
@@ -59,7 +65,8 @@ RUN apk add --no-cache \
     kmod \
     iptables-legacy \
     wireguard-go \
-    wireguard-tools
+    wireguard-tools \
+    wget  # Добавляем wget для healthcheck
 
 RUN mkdir -p /etc/amnezia
 RUN ln -s /etc/wireguard /etc/amnezia/amneziawg
